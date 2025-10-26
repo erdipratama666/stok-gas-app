@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Stok {
+  id            Int      @id @default(autoincrement())
+  tabungIsi     Int      @default(0)
+  tabungKosong  Int      @default(0)
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+
+  @@map("stok")
+}
+
+model Transaksi {
+  id          Int      @id @default(autoincrement())
+  action      String   // "masuk" atau "keluar"
+  tipe        String   // "isi" atau "kosong"
+  jumlah      Int
+  keterangan  String?
+  createdAt   DateTime @default(now())
+  createdBy   String?  // User ID (opsional, untuk tracking siapa yang input)
+
+  @@map("transaksi")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String   // Hash password dengan bcrypt
+  nama      String
+  role      String   @default("staff") // "admin" atau "staff"
+  createdAt DateTime @default(now())
+
+  @@map("users")
+}
