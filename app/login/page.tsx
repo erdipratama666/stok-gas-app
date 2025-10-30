@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -14,6 +15,9 @@ const LoginPage = () => {
   const [success, setSuccess] = useState('');
   const { login, register } = useAuth();
   const router = useRouter();
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,33 +79,33 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white py-8">
-      <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-md mx-4 sm:mx-0">
+      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm w-full max-w-md mx-4 sm:mx-0">
         <div className="text-center mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-green-700 mb-1">PT Kharisma Radja</h1>
           <p className="text-gray-600 text-sm sm:text-base">Management Stock LPG</p>
         </div>
         
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded mb-4 text-sm">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 text-sm">
+          <div className="bg-green-50 text-green-700 px-4 py-3 rounded mb-4 text-sm">
             {success}
           </div>
         )}
         
         <div className="mb-4">
-          <div className="flex border-b border-gray-200">
+          <div className="flex bg-gray-100 rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => !isRegister || toggleMode()}
-              className={`flex-1 py-2 text-center font-medium transition ${
+              className={`flex-1 py-2 text-center font-medium text-sm transition ${
                 !isRegister
-                  ? 'text-green-600 border-b-2 border-green-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500'
               }`}
             >
               Login
@@ -109,10 +113,10 @@ const LoginPage = () => {
             <button
               type="button"
               onClick={() => isRegister || toggleMode()}
-              className={`flex-1 py-2 text-center font-medium transition ${
+              className={`flex-1 py-2 text-center font-medium text-sm transition ${
                 isRegister
-                  ? 'text-green-600 border-b-2 border-green-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500'
               }`}
             >
               Daftar
@@ -128,7 +132,7 @@ const LoginPage = () => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-4 py-2 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
                 placeholder="Masukkan nama lengkap"
                 required={isRegister}
               />
@@ -141,7 +145,7 @@ const LoginPage = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-4 py-2 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
               placeholder="nama@email.com"
               required
             />
@@ -149,33 +153,53 @@ const LoginPage = () => {
           
           <div>
             <label className="block text-gray-700 mb-2 font-medium text-sm">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="••••••••"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-300 pr-10"
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-1"
+                aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           {isRegister && (
             <div>
               <label className="block text-gray-700 mb-2 font-medium text-sm">Konfirmasi Password</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="••••••••"
-                required={isRegister}
-              />
+              <div className="relative">
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-300 pr-10"
+                  placeholder="••••••••"
+                  required={isRegister}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((s) => !s)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-1"
+                  aria-label={showConfirm ? 'Sembunyikan konfirmasi password' : 'Tampilkan konfirmasi password'}
+                >
+                  {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           )}
           
           <button
             type="submit"
-            className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold shadow-md hover:shadow-lg"
+            className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold shadow-md"
           >
             {isRegister ? 'Daftar' : 'Login'}
           </button>
@@ -183,9 +207,13 @@ const LoginPage = () => {
         
         {!isRegister && (
           <div className="mt-4 text-center">
-            <a href="#" className="text-sm text-green-600 hover:text-green-700">
+            <button
+              type="button"
+              className="text-sm text-green-600 hover:text-green-700"
+              onClick={() => alert('Fitur lupa password belum tersedia')}
+            >
               Lupa password?
-            </a>
+            </button>
           </div>
         )}
       </div>

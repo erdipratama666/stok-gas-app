@@ -45,7 +45,7 @@ export default function GasKeluarForm({ onGasKeluar }: Props) {
         <textarea value={keterangan} onChange={(e) => setKeterangan(e.target.value)} className="w-full border rounded px-3 py-2" rows={3} />
       </div>
 
-      <button type="submit" className="w-full bg-red-600 text-white py-2 rounded">Catat Keluar</button>
+      <button type="submit" className="w-full bg-red-600 text-white py-2 rounded">Catat</button>
     </form>
   );
 }

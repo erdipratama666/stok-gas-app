@@ -58,9 +58,11 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-white">
       <Sidebar />
-      <div className="ml-64">
+      <div className="md:ml-64">
         <Topbar />
-        <main className="p-8">{children}</main>
+        <main className="p-4 md:p-8 pt-16 md:pt-6">
+          {children}
+        </main>
       </div>
     </div>
   );

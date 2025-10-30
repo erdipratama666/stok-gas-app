@@ -45,7 +45,7 @@ export default function GasMasukForm({ onGasMasuk }: Props) {
         <textarea value={keterangan} onChange={(e) => setKeterangan(e.target.value)} className="w-full border rounded px-3 py-2" rows={3} />
       </div>
 
-      <button type="submit" className="w-full bg-green-600 text-white py-2 rounded">Catat / Tambah Stok</button>
+      <button type="submit" className="w-full bg-green-600 text-white py-2 rounded">Catat</button>
     </form>
   );
 }
