@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import GasMasukForm from './GasMasukForm';
 import GasKeluarForm from './GasKeluarForm';
-import StockOverview from '../stok/StokOverview';
+import StockOverview from '../stok/StockOverview';
 
 type TipeTabung = 'isi' | 'kosong';
 
