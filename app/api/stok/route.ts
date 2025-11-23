@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// GET - Ambil data stok terbaru
+
 export async function GET() {
   try {
     let stok = await prisma.stok.findFirst({
       orderBy: { updatedAt: 'desc' }
     });
 
-    // Jika belum ada data, create default
+    // Jika belum ada stok, buat default
     if (!stok) {
       stok = await prisma.stok.create({
-        data: {
-          tabungIsi: 0,
-          tabungKosong: 0
-        }
+        data: { tabungIsi: 0, tabungKosong: 0 }
       });
     }
 
@@ -31,7 +28,7 @@ export async function GET() {
   }
 }
 
-// POST - Update stok (masuk/keluar)
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -45,16 +42,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (tipe !== 'isi' && tipe !== 'kosong') {
+    if (!['isi', 'kosong'].includes(tipe)) {
       return NextResponse.json(
         { error: 'Tipe tabung tidak valid' },
         { status: 400 }
       );
     }
 
-    if (action !== 'masuk' && action !== 'keluar') {
+    if (!['masuk', 'keluar', 'pinjam'].includes(action)) {
       return NextResponse.json(
-        { error: 'Action tidak valid' },
+        { error: 'Action tidak valid (masuk/keluar/pinjam)' },
         { status: 400 }
       );
     }
@@ -73,16 +70,18 @@ export async function POST(request: NextRequest) {
     let newTabungIsi = stok.tabungIsi;
     let newTabungKosong = stok.tabungKosong;
 
-    // Hitung stok baru
+
+
+    // GAS MASUK
     if (action === 'masuk') {
+      if (tipe === 'isi') newTabungIsi += jumlah;
+      else newTabungKosong += jumlah;
+    }
+
+    // GAS KELUAR atau PINJAM
+    if (action === 'keluar' || action === 'pinjam') {
       if (tipe === 'isi') {
-        newTabungIsi += jumlah;
-      } else {
-        newTabungKosong += jumlah;
-      }
-    } else if (action === 'keluar') {
-      if (tipe === 'isi') {
-        if (stok.tabungIsi < jumlah) {
+        if (jumlah > stok.tabungIsi) {
           return NextResponse.json(
             { error: `Stok tabung isi tidak cukup! Stok saat ini: ${stok.tabungIsi}` },
             { status: 400 }
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
         }
         newTabungIsi -= jumlah;
       } else {
-        if (stok.tabungKosong < jumlah) {
+        if (jumlah > stok.tabungKosong) {
           return NextResponse.json(
             { error: `Stok tabung kosong tidak cukup! Stok saat ini: ${stok.tabungKosong}` },
             { status: 400 }
@@ -100,14 +99,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update stok dan catat transaksi dalam satu transaction
-    const [updatedStok, transaksi] = await prisma.$transaction([
+
+    const [updatedStok] = await prisma.$transaction([
+      // simpan versi stok baru
       prisma.stok.create({
         data: {
           tabungIsi: newTabungIsi,
           tabungKosong: newTabungKosong
         }
       }),
+
+      // simpan log transaksi
       prisma.transaksi.create({
         data: {
           action,
@@ -120,7 +122,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Gas ${action} berhasil dicatat`,
+      message:
+        action === 'masuk'
+          ? 'Gas masuk berhasil dicatat'
+          : action === 'keluar'
+          ? 'Gas keluar berhasil dicatat'
+          : 'Gas pinjam berhasil dicatat',
       stok: {
         tabungIsi: updatedStok.tabungIsi,
         tabungKosong: updatedStok.tabungKosong

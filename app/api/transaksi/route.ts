@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const transaksi = await prisma.transaksi.findMany({
       orderBy: { createdAt: 'desc' },
-      take: 100 // Ambil 100 transaksi terakhir
+      take: 25 // Ambil 25 transaksi terakhir
     });
 
     return NextResponse.json(transaksi);

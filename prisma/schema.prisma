@@ -19,7 +19,7 @@ model Stok {
 
 model Transaksi {
   id          Int      @id @default(autoincrement())
-  action      String   // "masuk" atau "keluar"
+  action      String   // "masuk", "keluar", "pinjam"
   tipe        String   // "isi" atau "kosong"
   jumlah      Int
   keterangan  String?

@@ -26,6 +26,7 @@ export default function Sidebar() {
     { name: 'Stok Gas', icon: Package, path: '/stok' },
     { name: 'Gas Masuk', icon: ArrowDownCircle, path: '/masuk' },
     { name: 'Gas Keluar', icon: ArrowUpCircle, path: '/keluar' },
+    { name: 'Gas Pinjam', icon: ArrowUpCircle, path: '/pinjam' },
     { name: 'Riwayat', icon: History, path: '/riwayat' },
   ];
 

@@ -4,11 +4,12 @@ import GasMasukForm from './GasMasukForm';
 import GasKeluarForm from './GasKeluarForm';
 import StockOverview from '../stok/StockOverview';
 
-type TipeTabung = 'isi' | 'kosong';
+type TipeTabung = 'isi' | 'kosong' | 'pinjam';
 
 const GasManagement: React.FC = () => {
   const [stokTabungIsi, setStokTabungIsi] = useState(0);
   const [stokTabungKosong, setStokTabungKosong] = useState(0);
+  const [stokTabungPinjam, setStokTabungPinjam] = useState(0);
   const [loading, setLoading] = useState(false);
 
   // Fetch stok saat pertama kali load
@@ -20,8 +21,10 @@ const GasManagement: React.FC = () => {
     try {
       const response = await fetch('/api/stok');
       const data = await response.json();
+
       setStokTabungIsi(data.tabungIsi);
       setStokTabungKosong(data.tabungKosong);
+      setStokTabungPinjam(data.tabungPinjam);
     } catch (error) {
       console.error('Error fetching stok:', error);
       alert('Gagal memuat data stok');
@@ -40,7 +43,7 @@ const GasManagement: React.FC = () => {
           action: 'masuk',
           tipe,
           jumlah,
-          keterangan
+          keterangan,
         }),
       });
 
@@ -54,6 +57,8 @@ const GasManagement: React.FC = () => {
       // Update stok dari response
       setStokTabungIsi(data.stok.tabungIsi);
       setStokTabungKosong(data.stok.tabungKosong);
+      setStokTabungPinjam(data.stok.tabungPinjam);
+
       alert(data.message);
     } catch (error) {
       console.error('Error:', error);
@@ -75,7 +80,7 @@ const GasManagement: React.FC = () => {
           action: 'keluar',
           tipe,
           jumlah,
-          keterangan
+          keterangan,
         }),
       });
 
@@ -89,6 +94,8 @@ const GasManagement: React.FC = () => {
       // Update stok dari response
       setStokTabungIsi(data.stok.tabungIsi);
       setStokTabungKosong(data.stok.tabungKosong);
+      setStokTabungPinjam(data.stok.tabungPinjam);
+
       alert(data.message);
     } catch (error) {
       console.error('Error:', error);
@@ -102,11 +109,12 @@ const GasManagement: React.FC = () => {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">Manajemen Stok Gas</h1>
-        
+
         {/* Tampilan Overview Stok */}
-        <StockOverview 
-          stokTabungIsi={stokTabungIsi} 
-          stokTabungKosong={stokTabungKosong} 
+        <StockOverview
+          stokTabungIsi={stokTabungIsi}
+          stokTabungKosong={stokTabungKosong}
+          stokTabungPinjam={stokTabungPinjam}
         />
 
         {/* Grid Form */}
