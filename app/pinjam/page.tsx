@@ -1,44 +1,95 @@
-"use client";
+'use client';
+import { useState, useEffect } from 'react';
+import TabungPinjamForm from '@/components/transaksi/TabungPinjamForm';
 
-import React from 'react';
-import GasPinjamForm from '@/components/transaksi/GasPinjamForm';
-import { useStock } from '@/context/StockContext';
+type Stok = {
+  tabungIsi: number;
+  tabungKosong: number;
+  tabungPinjam: number;
+};
 
 export default function PinjamPage() {
-  const { pinjamStock, stokIsi, stokKosong } = useStock();
+  const [stok, setStok] = useState<Stok>({
+    tabungIsi: 0,
+    tabungKosong: 0,
+    tabungPinjam: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
-  const handleGasPinjam = (jumlah: number, keterangan: string, tipe: 'isi' | 'kosong') => {
-    const berhasil = pinjamStock(tipe, jumlah);
-    if (!berhasil) return alert('Stok tidak mencukupi.');
+  useEffect(() => {
+    fetchStok();
+  }, []);
 
-    const riwayat = JSON.parse(localStorage.getItem('riwayatTransaksi') || '[]');
-    riwayat.unshift({
-      type: 'pinjam',
-      tipe,
-      jumlah,
-      keterangan,
-      date: new Date().toISOString(),
-    });
-    localStorage.setItem('riwayatTransaksi', JSON.stringify(riwayat));
-
-    window.dispatchEvent(new CustomEvent('stok:updated'));
-    alert('Peminjaman berhasil dicatat.');
+  const fetchStok = async () => {
+    try {
+      const res = await fetch('/api/stok');
+      if (res.ok) {
+        const data = await res.json();
+        setStok({
+          tabungIsi: data.tabungIsi ?? 0,
+          tabungKosong: data.tabungKosong ?? 0,
+          tabungPinjam: data.tabungPinjam ?? 0,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching stok:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="p-6 max-w-2xl">
-      <h2 className="text-3xl font-bold mb-6">Pinjam Gas</h2>
-      <div className="mb-6 grid grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded shadow">
-          Tabung Isi:
-          <div className="text-2xl font-bold">{stokIsi}</div>
-        </div>
-        <div className="bg-white p-4 rounded shadow">
-          Tabung Kosong:
-          <div className="text-2xl font-bold">{stokKosong}</div>
-        </div>
+  const handleTabungPinjam = async (
+    action: 'pinjam' | 'kembali',
+    jumlah: number,
+    keterangan: string,
+    tipe: 'isi' | 'kosong'
+  ) => {
+    try {
+      const res = await fetch('/api/stok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          tipe,
+          jumlah,
+          keterangan,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setStok({
+          tabungIsi: data.stok.tabungIsi ?? 0,
+          tabungKosong: data.stok.tabungKosong ?? 0,
+          tabungPinjam: data.stok.tabungPinjam ?? 0,
+        });
+
+        alert(action === 'pinjam' ? 'Tabung berhasil dipinjamkan!' : 'Tabung berhasil dikembalikan!');
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Gagal memproses tabung pinjam');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Terjadi kesalahan');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">Memuat data...</div>
       </div>
-      <GasPinjamForm onGasPinjam={handleGasPinjam} />
+    );
+  }
+
+  // ✅ Return baru tanpa UI lain
+  return (
+    <div className="p-4">
+      <TabungPinjamForm 
+        onTabungPinjam={handleTabungPinjam} 
+        stokTabungPinjam={stok.tabungPinjam} 
+      />
     </div>
   );
 }

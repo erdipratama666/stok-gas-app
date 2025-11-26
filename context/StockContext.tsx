@@ -1,161 +1,92 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-type TipeTabung = 'isi' | 'kosong';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type StockContextType = {
+type TipeTabung = 'isi' | 'kosong' | 'pinjam';
+
+interface StockContextType {
   stokIsi: number;
   stokKosong: number;
   stokPinjam: number;
   addStock: (tipe: TipeTabung, jumlah: number) => void;
   removeStock: (tipe: TipeTabung, jumlah: number) => boolean;
   pinjamStock: (tipe: TipeTabung, jumlah: number) => boolean;
-  kembalikanPinjam: (jumlah: number) => boolean;
   resetStock: () => void;
-  reload: () => void;
-};
+}
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
 
-export const StockProvider = ({ children }: { children: ReactNode }) => {
-  const [stokIsi, setStokIsi] = useState<number>(0);
-  const [stokKosong, setStokKosong] = useState<number>(0);
-  const [stokPinjam, setStokPinjam] = useState<number>(0);
-
-  const load = () => {
-    if (typeof window === 'undefined') return;
-    setStokIsi(parseInt(localStorage.getItem('stokTabungIsi') || '0', 10));
-    setStokKosong(parseInt(localStorage.getItem('stokTabungKosong') || '0', 10));
-    setStokPinjam(parseInt(localStorage.getItem('stokTabungPinjam') || '0', 10));
-  };
+export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [stokIsi, setStokIsi] = useState(0);
+  const [stokKosong, setStokKosong] = useState(0);
+  const [stokPinjam, setStokPinjam] = useState(0);
 
   useEffect(() => {
+    const load = () => {
+      const isi = localStorage.getItem('stokIsi');
+      const kosong = localStorage.getItem('stokKosong');
+      const pinjam = localStorage.getItem('stokPinjam');
+      if (isi) setStokIsi(Number(isi));
+      if (kosong) setStokKosong(Number(kosong));
+      if (pinjam) setStokPinjam(Number(pinjam));
+    };
     load();
-    const onStorage = () => load();
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    window.addEventListener('stok:updated', load);
+    return () => window.removeEventListener('stok:updated', load);
   }, []);
 
-  const persist = (key: string, value: number) => {
-    localStorage.setItem(key, String(value));
+  const persist = (isi: number, kosong: number, pinjam: number) => {
+    localStorage.setItem('stokIsi', String(isi));
+    localStorage.setItem('stokKosong', String(kosong));
+    localStorage.setItem('stokPinjam', String(pinjam));
+    setStokIsi(isi);
+    setStokKosong(kosong);
+    setStokPinjam(pinjam);
     window.dispatchEvent(new CustomEvent('stok:updated'));
   };
 
-  useEffect(() => {
-    const onCustom = () => load();
-    window.addEventListener('stok:updated', onCustom);
-    return () => window.removeEventListener('stok:updated', onCustom);
-  }, []);
-
-  // ---- GAS MASUK ----
   const addStock = (tipe: TipeTabung, jumlah: number) => {
-    if (tipe === 'isi') {
-      const n = stokIsi + jumlah;
-      setStokIsi(n);
-      persist('stokTabungIsi', n);
-    } else {
-      const n = stokKosong + jumlah;
-      setStokKosong(n);
-      persist('stokTabungKosong', n);
-    }
+    if (tipe === 'isi') persist(stokIsi + jumlah, stokKosong, stokPinjam);
+    else if (tipe === 'kosong') persist(stokIsi, stokKosong + jumlah, stokPinjam);
+    else if (tipe === 'pinjam') persist(stokIsi, stokKosong, stokPinjam + jumlah);
   };
 
-  // ---- GAS KELUAR ----
-  const removeStock = (tipe: TipeTabung, jumlah: number): boolean => {
+  const removeStock = (tipe: TipeTabung, jumlah: number) => {
     if (tipe === 'isi') {
-      if (jumlah > stokIsi) return false;
-      const n = stokIsi - jumlah;
-      setStokIsi(n);
-      persist('stokTabungIsi', n);
+      if (stokIsi < jumlah) return false;
+      persist(stokIsi - jumlah, stokKosong, stokPinjam);
       return true;
-    } else {
-      if (jumlah > stokKosong) return false;
-      const n = stokKosong - jumlah;
-      setStokKosong(n);
-      persist('stokTabungKosong', n);
+    } else if (tipe === 'kosong') {
+      if (stokKosong < jumlah) return false;
+      persist(stokIsi, stokKosong - jumlah, stokPinjam);
+      return true;
+    } else if (tipe === 'pinjam') {
+      if (stokPinjam < jumlah) return false;
+      persist(stokIsi, stokKosong, stokPinjam - jumlah);
       return true;
     }
+    return false;
   };
 
-  // ---- PINJAM TABUNG ----
-  const pinjamStock = (tipe: TipeTabung, jumlah: number): boolean => {
-    if (tipe === 'isi') {
-      if (jumlah > stokIsi) return false;
-
-      // kurangi stok isi
-      const newIsi = stokIsi - jumlah;
-      setStokIsi(newIsi);
-      persist('stokTabungIsi', newIsi);
-
-    } else {
-      if (jumlah > stokKosong) return false;
-
-      // kurangi stok kosong
-      const newKosong = stokKosong - jumlah;
-      setStokKosong(newKosong);
-      persist('stokTabungKosong', newKosong);
-    }
-
-    // tambah stok pinjam
-    const newPinjam = stokPinjam + jumlah;
-    setStokPinjam(newPinjam);
-    persist('stokTabungPinjam', newPinjam);
-
-    return true;
-  };
-
-  // ---- MENGEMBALIKAN TABUNG PINJAMAN ----
-  const kembalikanPinjam = (jumlah: number): boolean => {
-    if (jumlah > stokPinjam) return false;
-
-    // kurangi pinjam
-    const newPinjam = stokPinjam - jumlah;
-    setStokPinjam(newPinjam);
-    persist('stokTabungPinjam', newPinjam);
-
-    // tabung kembali → masuk kategori KOSONG
-    const newKosong = stokKosong + jumlah;
-    setStokKosong(newKosong);
-    persist('stokTabungKosong', newKosong);
-
-    return true;
+  const pinjamStock = (tipe: TipeTabung, jumlah: number) => {
+    return removeStock(tipe, jumlah);
   };
 
   const resetStock = () => {
-    setStokIsi(0);
-    setStokKosong(0);
-    setStokPinjam(0);
-
-    localStorage.removeItem('stokTabungIsi');
-    localStorage.removeItem('stokTabungKosong');
-    localStorage.removeItem('stokTabungPinjam');
+    persist(0, 0, 0);
     localStorage.removeItem('riwayatTransaksi');
-
-    window.dispatchEvent(new CustomEvent('stok:updated'));
-    window.dispatchEvent(new CustomEvent('riwayat:cleared'));
+    localStorage.removeItem('pinjamList');
   };
 
   return (
-    <StockContext.Provider
-      value={{
-        stokIsi,
-        stokKosong,
-        stokPinjam,
-        addStock,
-        removeStock,
-        pinjamStock,
-        kembalikanPinjam,
-        resetStock,
-        reload: load,
-      }}
-    >
+    <StockContext.Provider value={{ stokIsi, stokKosong, stokPinjam, addStock, removeStock, pinjamStock, resetStock }}>
       {children}
     </StockContext.Provider>
   );
 };
 
 export const useStock = () => {
-  const ctx = useContext(StockContext);
-  if (!ctx) throw new Error('useStock must be used within StockProvider');
-  return ctx;
+  const context = useContext(StockContext);
+  if (!context) throw new Error('useStock must be used within StockProvider');
+  return context;
 };

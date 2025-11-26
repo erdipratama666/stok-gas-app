@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -11,6 +11,7 @@ model Stok {
   id            Int      @id @default(autoincrement())
   tabungIsi     Int      @default(0)
   tabungKosong  Int      @default(0)
+  tabungPinjam  Int      @default(0)
   updatedAt     DateTime @updatedAt
   createdAt     DateTime @default(now())
 
@@ -19,7 +20,7 @@ model Stok {
 
 model Transaksi {
   id          Int      @id @default(autoincrement())
-  action      String   // "masuk", "keluar", "pinjam"
+  action      String   // "masuk", "keluar", "pinjam", "kembali"
   tipe        String   // "isi" atau "kosong"
   jumlah      Int
   keterangan  String?
