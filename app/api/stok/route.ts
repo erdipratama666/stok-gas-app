@@ -1,143 +1,101 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-
 export async function GET() {
   try {
-    let stok = await prisma.stok.findFirst({
-      orderBy: { updatedAt: 'desc' }
-    });
-
-    // Jika belum ada stok, buat default
+    let stok = await prisma.stok.findFirst({ orderBy: { id: 'desc' } });
     if (!stok) {
-      stok = await prisma.stok.create({
-        data: { tabungIsi: 0, tabungKosong: 0 }
+      stok = await prisma.stok.create({ 
+        data: { tabungIsi: 0, tabungKosong: 0, tabungPinjam: 0 } 
       });
     }
-
     return NextResponse.json({
       tabungIsi: stok.tabungIsi,
-      tabungKosong: stok.tabungKosong
+      tabungKosong: stok.tabungKosong,
+      tabungPinjam: (stok as any).tabungPinjam ?? 0,
     });
-  } catch (error) {
-    console.error('Error fetching stok:', error);
-    return NextResponse.json(
-      { error: 'Gagal mengambil data stok' },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error('GET /api/stok error', err);
+    return NextResponse.json({ error: 'Gagal mengambil stok' }, { status: 500 });
   }
 }
-
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, tipe, jumlah, keterangan } = body;
+    const action = String(body.action || '').trim();
+    const tipe = String(body.tipe || '').trim();
+    const jumlah = Number(body.jumlah);
+    const keterangan = body.keterangan ?? '';
 
-    // Validasi input
-    if (!action || !tipe || !jumlah) {
-      return NextResponse.json(
-        { error: 'Data tidak lengkap' },
-        { status: 400 }
-      );
+    if (!action || !tipe || Number.isNaN(jumlah)) {
+      return NextResponse.json({ error: 'Payload tidak valid' }, { status: 400 });
     }
 
-    if (!['isi', 'kosong'].includes(tipe)) {
-      return NextResponse.json(
-        { error: 'Tipe tabung tidak valid' },
-        { status: 400 }
-      );
-    }
+    let stok = await prisma.stok.findFirst({ orderBy: { id: 'desc' } });
+    if (!stok) stok = await prisma.stok.create({ data: { tabungIsi: 0, tabungKosong: 0, tabungPinjam: 0 } });
 
+    let newIsi = stok.tabungIsi;
+    let newKosong = stok.tabungKosong;
+    let newPinjam = (stok as any).tabungPinjam ?? 0;
+
+    // validasi action
     if (!['masuk', 'keluar', 'pinjam'].includes(action)) {
-      return NextResponse.json(
-        { error: 'Action tidak valid (masuk/keluar/pinjam)' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Action tidak valid' }, { status: 400 });
     }
 
-    // Ambil stok terbaru
-    let stok = await prisma.stok.findFirst({
-      orderBy: { updatedAt: 'desc' }
-    });
-
-    if (!stok) {
-      stok = await prisma.stok.create({
-        data: { tabungIsi: 0, tabungKosong: 0 }
-      });
-    }
-
-    let newTabungIsi = stok.tabungIsi;
-    let newTabungKosong = stok.tabungKosong;
-
-
-
-    // GAS MASUK
     if (action === 'masuk') {
-      if (tipe === 'isi') newTabungIsi += jumlah;
-      else newTabungKosong += jumlah;
-    }
-
-    // GAS KELUAR atau PINJAM
-    if (action === 'keluar' || action === 'pinjam') {
+      if (tipe === 'isi') newIsi += jumlah;
+      else if (tipe === 'kosong') newKosong += jumlah;
+      else return NextResponse.json({ error: 'Tipe tidak valid' }, { status: 400 });
+    } else if (action === 'keluar') {
       if (tipe === 'isi') {
-        if (jumlah > stok.tabungIsi) {
-          return NextResponse.json(
-            { error: `Stok tabung isi tidak cukup! Stok saat ini: ${stok.tabungIsi}` },
-            { status: 400 }
-          );
-        }
-        newTabungIsi -= jumlah;
-      } else {
-        if (jumlah > stok.tabungKosong) {
-          return NextResponse.json(
-            { error: `Stok tabung kosong tidak cukup! Stok saat ini: ${stok.tabungKosong}` },
-            { status: 400 }
-          );
-        }
-        newTabungKosong -= jumlah;
-      }
+        if (jumlah > stok.tabungIsi) return NextResponse.json({ error: `Stok isi tidak cukup (${stok.tabungIsi})` }, { status: 400 });
+        newIsi -= jumlah;
+      } else if (tipe === 'kosong') {
+        if (jumlah > stok.tabungKosong) return NextResponse.json({ error: `Stok kosong tidak cukup (${stok.tabungKosong})` }, { status: 400 });
+        newKosong -= jumlah;
+      } else return NextResponse.json({ error: 'Tipe tidak valid' }, { status: 400 });
+    } else if (action === 'pinjam') {
+      if (tipe === 'isi') {
+        if (jumlah > stok.tabungIsi) return NextResponse.json({ error: `Stok isi tidak cukup (${stok.tabungIsi})` }, { status: 400 });
+        newIsi -= jumlah;
+      } else if (tipe === 'kosong') {
+        if (jumlah > stok.tabungKosong) return NextResponse.json({ error: `Stok kosong tidak cukup (${stok.tabungKosong})` }, { status: 400 });
+        newKosong -= jumlah;
+      } else return NextResponse.json({ error: 'Tipe tidak valid' }, { status: 400 });
+      newPinjam += jumlah;
     }
 
-
-    const [updatedStok] = await prisma.$transaction([
-      // simpan versi stok baru
+    // simpan stok baru + riwayat transaksi dalam 1 transaksi
+    const [createdStok] = await prisma.$transaction([
       prisma.stok.create({
         data: {
-          tabungIsi: newTabungIsi,
-          tabungKosong: newTabungKosong
-        }
+          tabungIsi: newIsi,
+          tabungKosong: newKosong,
+          tabungPinjam: newPinjam,
+        } as any,
       }),
-
-      // simpan log transaksi
       prisma.transaksi.create({
-        data: {
-          action,
-          tipe,
-          jumlah,
-          keterangan: keterangan || ''
-        }
-      })
+        data: { 
+          action, 
+          tipe, 
+          jumlah, 
+          keterangan: String(keterangan),
+          createdBy: 'user', // bisa dari session nanti
+        },
+      }),
     ]);
 
-    return NextResponse.json({
-      success: true,
-      message:
-        action === 'masuk'
-          ? 'Gas masuk berhasil dicatat'
-          : action === 'keluar'
-          ? 'Gas keluar berhasil dicatat'
-          : 'Gas pinjam berhasil dicatat',
-      stok: {
-        tabungIsi: updatedStok.tabungIsi,
-        tabungKosong: updatedStok.tabungKosong
-      }
-    });
-  } catch (error) {
-    console.error('Error updating stok:', error);
-    return NextResponse.json(
-      { error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
+    const responseStok = {
+      tabungIsi: createdStok.tabungIsi,
+      tabungKosong: createdStok.tabungKosong,
+      tabungPinjam: (createdStok as any).tabungPinjam ?? newPinjam,
+    };
+
+    return NextResponse.json({ success: true, stok: responseStok });
+  } catch (err) {
+    console.error('POST /api/stok error', err);
+    return NextResponse.json({ error: 'Terjadi kesalahan server' }, { status: 500 });
   }
 }

@@ -1,49 +1,114 @@
-"use client";
-
-import React from 'react';
+'use client';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import GasMasukForm from '@/components/transaksi/GasMasukForm';
-import { useStock } from '@/context/StockContext';
+import StockOverview from '@/components/stok/StockOverview';
 
-const generateId = () =>
-  (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-    ? (crypto as any).randomUUID()
-    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+type Stok = {
+  tabungIsi: number;
+  tabungKosong: number;
+  tabungPinjam: number;
+};
 
 export default function MasukPage() {
-  const { addStock } = useStock();
+  const router = useRouter();
+  const [stok, setStok] = useState<Stok>({ 
+    tabungIsi: 0, 
+    tabungKosong: 0, 
+    tabungPinjam: 0 
+  });
+  const [loading, setLoading] = useState(true);
 
-  const handleGasMasuk = (jumlah: number, keterangan: string, tipe: 'isi' | 'kosong' | 'pinjam') => {
-    // tambahkan ke stok sesuai tipe (termasuk 'pinjam')
-    addStock(tipe, jumlah);
+  useEffect(() => {
+    fetchStok();
+  }, []);
 
-    // catat riwayat
-    const riwayat = JSON.parse(localStorage.getItem('riwayatTransaksi') || '[]');
-    riwayat.unshift({ type: 'masuk', tipe, jumlah, keterangan, date: new Date().toISOString() });
-    localStorage.setItem('riwayatTransaksi', JSON.stringify(riwayat));
-
-    // jika tipe pinjam, tambahkan juga ke daftar pinjam supaya tampil di PinjamTable / StockOverview
-    if (tipe === 'pinjam') {
-      const pinjamList = JSON.parse(localStorage.getItem('pinjamList') || '[]');
-      pinjamList.unshift({
-        id: generateId(),
-        namaPangkalan: keterangan || 'Pangkalan',
-        jumlah,
-        createdAt: new Date().toISOString(),
-      });
-      localStorage.setItem('pinjamList', JSON.stringify(pinjamList));
-      window.dispatchEvent(new CustomEvent('pinjam:updated'));
+  const fetchStok = async () => {
+    try {
+      const res = await fetch('/api/stok');
+      if (res.ok) {
+        const data = await res.json();
+        setStok(data);
+      }
+    } catch (err) {
+      console.error('Error fetching stok:', err);
+      alert('Gagal memuat data stok');
+    } finally {
+      setLoading(false);
     }
-
-    // beri tahu komponen lain untuk reload stok/riwayat
-    window.dispatchEvent(new CustomEvent('stok:updated'));
-
-    alert(`${jumlah} tabung (${tipe}) berhasil dicatat ke stok.`);
   };
 
+  const handleGasMasuk = async (
+    jumlah: number, 
+    keterangan: string, 
+    tipe: 'isi' | 'kosong'
+  ) => {
+    try {
+      const res = await fetch('/api/stok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'masuk',
+          tipe,
+          jumlah,
+          keterangan
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setStok({
+          tabungIsi: data.stok.tabungIsi,
+          tabungKosong: data.stok.tabungKosong,
+          tabungPinjam: data.stok.tabungPinjam
+        });
+        
+        alert(`✅ Berhasil menambahkan ${jumlah} tabung ${tipe}`);
+        await fetchStok();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Terjadi kesalahan');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">Memuat data...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Gas Masuk</h2>
-      <GasMasukForm onGasMasuk={handleGasMasuk} />
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="mb-6">
+          <button
+            onClick={() => router.push('/stok')}
+            className="text-gray-600 hover:text-gray-900 flex items-center gap-2 mb-4"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Kembali ke Stok Gas
+          </button>
+          <h1 className="text-3xl font-bold">Transaksi Masuk</h1>
+        </div>
+
+        <div className="mb-8">
+          <StockOverview
+            stokTabungIsi={stok.tabungIsi}
+            stokTabungKosong={stok.tabungKosong}
+            stokTabungPinjam={stok.tabungPinjam}
+          />
+        </div>
+
+        <GasMasukForm onGasMasuk={handleGasMasuk} />
+      </div>
     </div>
   );
 }

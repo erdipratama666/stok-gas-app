@@ -1,94 +1,123 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Trash2, Edit2, Check, X } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 type PinjamRow = {
-  id: string;
+  id: number;
   namaPangkalan: string;
   jumlah: number;
   createdAt: string;
 };
 
-const STORAGE_KEY = 'pinjamList';
-
-const generateId = () => {
-  return (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-    ? (crypto as any).randomUUID()
-    : String(Date.now()) + Math.random().toString(36).slice(2);
+type Props = {
+  onUpdate?: () => void;
 };
 
-export default function PinjamTable() {
+export default function PinjamTable({ onUpdate }: Props = {}) {
   const [rows, setRows] = useState<PinjamRow[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ namaPangkalan: string; jumlah: string }>({
-    namaPangkalan: '',
-    jumlah: '',
-  });
+  const [loading, setLoading] = useState(true);
+  const [namaPangkalan, setNamaPangkalan] = useState('');
+  const [jumlah, setJumlah] = useState('');
 
   useEffect(() => {
-    const load = () => {
-      const raw = localStorage.getItem(STORAGE_KEY) || '[]';
-      try {
-        setRows(JSON.parse(raw));
-      } catch {
-        setRows([]);
-      }
-    };
-    load();
-    window.addEventListener('pinjam:updated', load);
-    return () => window.removeEventListener('pinjam:updated', load);
+    fetchPinjam();
   }, []);
 
-  const persist = (nextRows: PinjamRow[]) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRows));
-    setRows(nextRows);
-    window.dispatchEvent(new CustomEvent('pinjam:updated'));
+  const fetchPinjam = async () => {
+    try {
+      // Fetch transaksi dengan action 'pinjam' yang belum 'kembali'
+      const res = await fetch('/api/transaksi?action=pinjam');
+      if (res.ok) {
+        const data = await res.json();
+        setRows(data);
+      }
+    } catch (err) {
+      console.error('Error fetching pinjam:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAdd = () => {
-    if (!draft.namaPangkalan.trim() || Number(draft.jumlah) <= 0) {
+  const handleAdd = async () => {
+    if (!namaPangkalan.trim() || Number(jumlah) <= 0) {
       alert('Masukkan nama pangkalan dan jumlah valid.');
       return;
     }
-    const newRow: PinjamRow = {
-      id: generateId(),
-      namaPangkalan: draft.namaPangkalan.trim(),
-      jumlah: Number(draft.jumlah),
-      createdAt: new Date().toISOString(),
-    };
-    persist([newRow, ...rows]);
-    setDraft({ namaPangkalan: '', jumlah: '' });
+
+    try {
+      const res = await fetch('/api/stok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'pinjam',
+          tipe: 'isi',  // Default pinjam tabung isi
+          jumlah: Number(jumlah),
+          keterangan: namaPangkalan.trim()
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert('✅ Berhasil meminjamkan ' + jumlah + ' tabung');
+        setNamaPangkalan('');
+        setJumlah('');
+        fetchPinjam();
+        onUpdate?.(); // Refresh stok di parent
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Terjadi kesalahan');
+    }
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Hapus catatan pinjam ini?')) return;
-    persist(rows.filter((r) => r.id !== id));
-  };
+  const handleKembali = async (row: PinjamRow) => {
+    const jumlahKembali = prompt(`Berapa tabung yang dikembalikan dari ${row.namaPangkalan}?`, String(row.jumlah));
+    if (!jumlahKembali) return;
 
-  const startEdit = (r: PinjamRow) => {
-    setEditingId(r.id);
-    setDraft({ namaPangkalan: r.namaPangkalan, jumlah: String(r.jumlah) });
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setDraft({ namaPangkalan: '', jumlah: '' });
-  };
-
-  const saveEdit = (id: string) => {
-    if (!draft.namaPangkalan.trim() || Number(draft.jumlah) <= 0) {
-      alert('Masukkan nama pangkalan dan jumlah valid.');
+    const num = Number(jumlahKembali);
+    if (num <= 0 || num > row.jumlah) {
+      alert('Jumlah tidak valid');
       return;
     }
-    const next = rows.map((r) =>
-      r.id === id
-        ? { ...r, namaPangkalan: draft.namaPangkalan.trim(), jumlah: Number(draft.jumlah) }
-        : r
-    );
-    persist(next);
-    cancelEdit();
+
+    // Tanya kondisi tabung
+    const kondisi = confirm('Tabung dikembalikan dalam kondisi ISI?\n\nOK = Isi\nCancel = Kosong');
+    const tipe = kondisi ? 'isi' : 'kosong';
+
+    try {
+      const res = await fetch('/api/stok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'kembali',
+          tipe: tipe,
+          jumlah: num,
+          keterangan: `Kembali dari ${row.namaPangkalan}`
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(`✅ Berhasil menerima pengembalian ${num} tabung ${tipe}`);
+        fetchPinjam();
+        onUpdate?.();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Terjadi kesalahan');
+    }
   };
+
+  if (loading) {
+    return <div className="bg-white rounded-lg shadow p-4">Memuat data...</div>;
+  }
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
@@ -97,105 +126,31 @@ export default function PinjamTable() {
       <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
         <input
           placeholder="Nama pangkalan"
-          className="px-3 py-2 rounded border"
-          value={draft.namaPangkalan}
-          onChange={(e) => setDraft((d) => ({ ...d, namaPangkalan: e.target.value }))}
+          className="px-3 py-2 rounded border focus:ring-2 focus:ring-blue-500"
+          value={namaPangkalan}
+          onChange={(e) => setNamaPangkalan(e.target.value)}
         />
         <input
           placeholder="Jumlah"
-          className="px-3 py-2 rounded border"
+          className="px-3 py-2 rounded border focus:ring-2 focus:ring-blue-500"
           type="number"
           min={1}
-          value={draft.jumlah}
-          onChange={(e) => setDraft((d) => ({ ...d, jumlah: e.target.value }))}
+          value={jumlah}
+          onChange={(e) => setJumlah(e.target.value)}
         />
         <button
           type="button"
           onClick={handleAdd}
-          className="bg-blue-600 text-white px-3 py-2 rounded"
+          className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 transition font-medium"
         >
           Tambah
         </button>
       </div>
 
-      {/* Mobile */}
-      <div className="space-y-3 md:hidden">
-        {rows.length === 0 && (
-          <div className="text-center text-gray-500 py-6">Belum ada catatan pinjam</div>
-        )}
-
-        {rows.map((r) => (
-          <div key={r.id} className="border rounded-lg p-3 bg-white shadow-sm">
-            <div className="flex justify-between">
-              <div>
-                <div className="text-sm text-gray-500">Pangkalan</div>
-                <div className="font-medium">{r.namaPangkalan}</div>
-              </div>
-
-              <div className="text-right">
-                <div className="text-sm text-gray-500">Jumlah</div>
-                <div className="font-semibold">{r.jumlah}</div>
-              </div>
-            </div>
-
-            <div className="mt-3 flex justify-end gap-2">
-              {editingId === r.id ? (
-                <>
-                  <button
-                    onClick={() => saveEdit(r.id)}
-                    className="bg-green-600 text-white px-2 py-1 rounded"
-                  >
-                    <Check size={14} />
-                  </button>
-                  <button
-                    onClick={cancelEdit}
-                    className="bg-gray-200 px-2 py-1 rounded"
-                  >
-                    <X size={14} />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => startEdit(r)}
-                    className="bg-yellow-400 text-white px-2 py-1 rounded"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(r.id)}
-                    className="bg-red-600 text-white px-2 py-1 rounded"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </>
-              )}
-            </div>
-
-            {editingId === r.id && (
-              <div className="mt-3 space-y-2">
-                <input
-                  className="w-full px-2 py-1 border rounded"
-                  value={draft.namaPangkalan}
-                  onChange={(e) => setDraft((d) => ({ ...d, namaPangkalan: e.target.value }))}
-                />
-                <input
-                  className="w-full px-2 py-1 border rounded"
-                  type="number"
-                  min={1}
-                  value={draft.jumlah}
-                  onChange={(e) => setDraft((d) => ({ ...d, jumlah: e.target.value }))}
-                />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Desktop */}
-      <div className="hidden md:block overflow-x-auto">
+      {/* Desktop Table */}
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-gray-600">
+          <thead className="text-left text-gray-600 bg-gray-50">
             <tr>
               <th className="px-3 py-2">Nama Pangkalan</th>
               <th className="px-3 py-2 w-28">Jumlah</th>
@@ -213,70 +168,29 @@ export default function PinjamTable() {
             )}
 
             {rows.map((r) => (
-              <tr key={r.id} className="border-t">
-                <td className="px-3 py-2 align-top">
-                  {editingId === r.id ? (
-                    <input
-                      className="px-2 py-1 border rounded w-full"
-                      value={draft.namaPangkalan}
-                      onChange={(e) => setDraft((d) => ({ ...d, namaPangkalan: e.target.value }))}
-                    />
-                  ) : (
-                    r.namaPangkalan
-                  )}
+              <tr key={r.id} className="border-t hover:bg-gray-50">
+                <td className="px-3 py-2">{r.namaPangkalan}</td>
+                <td className="px-3 py-2">
+                  <div className="font-medium">{r.jumlah}</div>
                 </td>
-
-                <td className="px-3 py-2 align-top">
-                  {editingId === r.id ? (
-                    <input
-                      className="px-2 py-1 border rounded w-full"
-                      type="number"
-                      min={1}
-                      value={draft.jumlah}
-                      onChange={(e) => setDraft((d) => ({ ...d, jumlah: e.target.value }))}
-                    />
-                  ) : (
-                    <div className="font-medium">{r.jumlah}</div>
-                  )}
-                </td>
-
-                <td className="px-3 py-2 align-top">
-                  {editingId === r.id ? (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => saveEdit(r.id)}
-                        className="bg-green-600 text-white px-2 py-1 rounded"
-                      >
-                        <Check size={16} />
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="bg-gray-200 px-2 py-1 rounded"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => startEdit(r)}
-                        className="bg-yellow-400 text-white px-2 py-1 rounded"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(r.id)}
-                        className="bg-red-600 text-white px-2 py-1 rounded"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  )}
+                <td className="px-3 py-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleKembali(r)}
+                      className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition text-xs"
+                    >
+                      Kembali
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-4 text-xs text-gray-500">
+        💡 Klik "Kembali" untuk mencatat pengembalian tabung
       </div>
     </div>
   );
