@@ -1,7 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import StockOverview from '@/components/stok/StockOverview';
-import PinjamTable from '@/components/pinjam/PinjamTable';
 
 type Stok = {
   tabungIsi: number;
@@ -98,9 +97,7 @@ export default function StockPage() {
         stokTabungPinjam={stok.tabungPinjam}
       />
 
-      <div className="mt-6">
-        <PinjamTable onUpdate={handleStokUpdate} />
-      </div>
+      {/* Catatan Pinjam dipindahkan dari menu Stok karena sudah ada fitur Kembali di modul Pinjam */}
     </div>
   );
 }

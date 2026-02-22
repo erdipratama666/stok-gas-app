@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 
 type Row = {
   id: number;
-  action: 'masuk' | 'keluar' | 'pinjam';
+  action: 'masuk' | 'keluar' | 'pinjam' | 'kembali';
   tipe: 'isi' | 'kosong';
   jumlah: number;
   keterangan: string | null;
@@ -68,6 +68,7 @@ export default function HistoryTable() {
                 {r.action === 'masuk' && '📥 Masuk'}
                 {r.action === 'keluar' && '📤 Keluar'}
                 {r.action === 'pinjam' && '🔄 Pinjam'}
+                {r.action === 'kembali' && '↩️ Kembali'}
               </td>
               <td className="px-3 py-2">
                 {r.tipe === 'isi' && '🟢 Isi'}
