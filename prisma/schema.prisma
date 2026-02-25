@@ -27,10 +27,24 @@ model Transaksi {
   tipe        String   // "isi" atau "kosong"
   jumlah      Int
   keterangan  String?
+  lokasi      String?  // "A", "B", "C", dst untuk gas keluar
   createdAt   DateTime @default(now())
   createdBy   String?  // User ID (opsional, untuk tracking siapa yang input)
 
   @@map("transaksi")
+}
+
+model TabungPinjam {
+  id            Int      @id @default(autoincrement())
+  namaPeminjam  String   // Nama customer yang meminjam
+  jumlahPinjam  Int      // Jumlah tabung yang dipinjam
+  jumlahKembali Int      @default(0) // Jumlah yang sudah dikembalikan
+  status        String   @default("dipinjam") // "dipinjam" atau "selesai"
+  catatan       String? // Catatan pinjam
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("tabung_pinjam")
 }
 
 model User {

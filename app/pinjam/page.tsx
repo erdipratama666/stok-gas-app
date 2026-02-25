@@ -41,37 +41,40 @@ export default function PinjamPage() {
   const handleTabungPinjam = async (
     action: 'pinjam' | 'kembali',
     jumlah: number,
-    keterangan: string,
-    tipe: 'isi' | 'kosong'
+    namaPeminjam: string,
+    tipe: 'isi' | 'kosong',
+    pinjamId?: number
   ) => {
     try {
-      const res = await fetch('/api/stok', {
+      const res = await fetch('/api/stok/pinjam', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action,
           tipe,
           jumlah,
-          keterangan,
+          namaPeminjam,
+          pinjamId,
         }),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        const data = await res.json();
         setStok({
           tabungIsi: data.stok.tabungIsi ?? 0,
           tabungKosong: data.stok.tabungKosong ?? 0,
           tabungPinjam: data.stok.tabungPinjam ?? 0,
         });
 
-        alert(action === 'pinjam' ? 'Tabung berhasil dipinjamkan!' : 'Tabung berhasil dikembalikan!');
+        alert(data.message || (action === 'pinjam' ? 'Tabung berhasil dipinjamkan!' : 'Tabung berhasil dikembalikan!'));
+        await fetchStok(); // Refresh data
       } else {
-        const errData = await res.json();
-        alert(errData.error || 'Gagal memproses tabung pinjam');
+        alert(data.error || 'Gagal memproses tabung pinjam');
       }
     } catch (err) {
       console.error('Error:', err);
-      alert('Terjadi kesalahan');
+      alert('Terjadi kesalahan: ' + String(err));
     }
   };
 

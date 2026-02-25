@@ -68,7 +68,7 @@ const GasManagement: React.FC = () => {
     }
   };
 
-  const handleGasKeluar = async (jumlah: number, keterangan: string, tipe: TipeTabung) => {
+  const handleGasKeluar = async (jumlah: number, keterangan: string, tipe: TipeTabung, lokasi: string) => {
     setLoading(true);
     try {
       const response = await fetch('/api/stok', {
@@ -81,6 +81,7 @@ const GasManagement: React.FC = () => {
           tipe,
           jumlah,
           keterangan,
+          lokasi,
         }),
       });
 

@@ -3,13 +3,20 @@ import React, { useState } from 'react';
 
 type TipeTabung = 'isi' | 'kosong';
 type Props = { 
-  onGasKeluar: (jumlah: number, keterangan: string, tipe: TipeTabung) => void; 
+  onGasKeluar: (jumlah: number, keterangan: string, tipe: TipeTabung, lokasi: string) => void; 
 };
+
+const LOKASI_PANGKALAN = [
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+  'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+  'U', 'V', 'W', 'X', 'Y', 'Z'
+];
 
 export default function GasKeluarForm({ onGasKeluar }: Props) {
   const [jumlah, setJumlah] = useState('');
   const [keterangan, setKeterangan] = useState('');
   const [tipe, setTipe] = useState<TipeTabung>('isi');
+  const [lokasi, setLokasi] = useState('A');
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,7 +25,7 @@ export default function GasKeluarForm({ onGasKeluar }: Props) {
       alert('Masukkan jumlah yang valid (minimal 1 tabung).');
       return;
     }
-    onGasKeluar(j, keterangan, tipe);
+    onGasKeluar(j, keterangan, tipe, lokasi);
     setJumlah('');
     setKeterangan('');
   };
@@ -55,6 +62,25 @@ export default function GasKeluarForm({ onGasKeluar }: Props) {
             <span>Tabung Kosong</span>
           </label>
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="keluar-lokasi" className="block text-sm font-medium mb-2">
+          Keluar Kemana (Pangkalan)
+        </label>
+        <select
+          id="keluar-lokasi"
+          value={lokasi}
+          onChange={(e) => setLokasi(e.target.value)}
+          className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          required
+        >
+          {LOKASI_PANGKALAN.map((lok) => (
+            <option key={lok} value={lok}>
+              Pangkalan {lok}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

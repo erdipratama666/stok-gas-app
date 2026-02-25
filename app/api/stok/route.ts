@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
     const tipe = String(body.tipe || "").trim().toLowerCase();
     const jumlah = Number(body.jumlah);
     const keterangan = body.keterangan ?? "";
+    const lokasi = body.lokasi ?? null;
+    const pinjamId = body.pinjamId ?? null;
 
     if (!action || !tipe || Number.isNaN(jumlah)) {
       return NextResponse.json({ error: "Payload tidak valid" }, { status: 400 });
@@ -129,7 +131,8 @@ export async function POST(request: NextRequest) {
       newPinjam -= jumlah;
     }
 
-    const [createdStok] = await prisma.$transaction([
+    // Build transaction operations
+    const transactionOps: any[] = [
       prisma.stok.create({
         data: {
           tabungIsi: newIsi,
@@ -143,13 +146,58 @@ export async function POST(request: NextRequest) {
           tipe,
           jumlah,
           keterangan: String(keterangan),
+          ...(lokasi ? { lokasi: String(lokasi) } : {}), // Hanya include lokasi jika ada
           createdBy: "user",
-        },
+        } as any,
       }),
-    ]);
+    ];
+
+    // Handle TabungPinjam untuk pinjam dan kembali (dengan error handling fallback)
+    if (action === "pinjam") {
+      try {
+        // @ts-ignore - TabungPinjam model exists
+        (transactionOps as any[]).push(
+          (prisma as any).tabungPinjam.create({
+            data: {
+              namaPeminjam: String(keterangan),
+              jumlahPinjam: jumlah,
+              jumlahKembali: 0,
+              status: "dipinjam",
+              catatan: "",
+            },
+          })
+        );
+      } catch (e) {
+        console.error("TabungPinjam create error:", e);
+        // Fallback: lanjut tanpa tabungPinjam record
+      }
+    } else if (action === "kembali" && pinjamId) {
+      try {
+        // @ts-ignore - TabungPinjam model exists
+        (transactionOps as any[]).push(
+          (prisma as any).tabungPinjam.update({
+            where: { id: pinjamId },
+            data: {
+              jumlahKembali: {
+                increment: jumlah,
+              },
+            },
+          })
+        );
+      } catch (e) {
+        console.error("TabungPinjam update error:", e);
+        // Fallback: lanjut tanpa update tabungPinjam
+      }
+    }
+
+    const [createdStok] = await prisma.$transaction(transactionOps);
 
     return NextResponse.json({
       success: true,
+      message: action === "pinjam" ? "Tabung berhasil dipinjamkan!" : 
+               action === "kembali" ? "Tabung berhasil dikembalikan!" :
+               action === "masuk" ? "Gas berhasil dicatat masuk!" :
+               "Gas berhasil dicatat keluar!",
       stok: {
         tabungIsi: createdStok.tabungIsi,
         tabungKosong: createdStok.tabungKosong,
@@ -157,7 +205,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("POST /api/stok error", err);
-    return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error("POST /api/stok error:", errorMsg, err);
+    return NextResponse.json({ 
+      error: "Terjadi kesalahan server. Cek console untuk detail."
+    }, { status: 500 });
   }
 }

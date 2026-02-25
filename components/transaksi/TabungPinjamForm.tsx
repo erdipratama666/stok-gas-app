@@ -1,15 +1,25 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 type ActionPinjam = 'pinjam' | 'kembali';
 type TipeTabung = 'isi' | 'kosong';
+
+type PinjamRecord = {
+  id: number;
+  namaPeminjam: string;
+  jumlahPinjam: number;
+  jumlahKembali: number;
+  status: string;
+  catatan: string;
+};
 
 type Props = { 
   onTabungPinjam: (
     action: ActionPinjam, 
     jumlah: number, 
     keterangan: string, 
-    tipe: TipeTabung
+    tipe: TipeTabung,
+    pinjamId?: number
   ) => void; 
   stokTabungPinjam: number;
 };
@@ -17,8 +27,33 @@ type Props = {
 export default function TabungPinjamForm({ onTabungPinjam, stokTabungPinjam }: Props) {
   const [jumlah, setJumlah] = useState('');
   const [keterangan, setKeterangan] = useState('');
+  const [namaPeminjam, setNamaPeminjam] = useState('');
   const [action, setAction] = useState<ActionPinjam>('pinjam');
   const [tipe, setTipe] = useState<TipeTabung>('isi');
+  const [pinjamRecords, setPinjamRecords] = useState<PinjamRecord[]>([]);
+  const [selectedPinjamId, setSelectedPinjamId] = useState<number | null>(null);
+
+  // Fetch pinjam records
+  useEffect(() => {
+    fetchPinjamRecords();
+  }, []);
+
+  const fetchPinjamRecords = async () => {
+    try {
+      const response = await fetch('/api/transaksi/pinjam');
+      if (response.ok) {
+        const data = await response.json();
+        setPinjamRecords(data);
+      }
+    } catch (error) {
+      console.error('Error fetching pinjam records:', error);
+    }
+  };
+
+  const handlePinjamSuccess = () => {
+    // Refresh pinjam records setelah transaksi berhasil
+    setTimeout(fetchPinjamRecords, 500);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,15 +64,38 @@ export default function TabungPinjamForm({ onTabungPinjam, stokTabungPinjam }: P
       return;
     }
 
-    // Validasi untuk pengembalian
-    if (action === 'kembali' && j > stokTabungPinjam) {
-      alert(`Tidak bisa mengembalikan ${j} tabung. Yang dipinjam hanya ${stokTabungPinjam} tabung.`);
+    // Validasi untuk pinjam - nama peminjam wajib
+    if (action === 'pinjam' && !namaPeminjam.trim()) {
+      alert('Masukkan nama peminjam');
       return;
     }
 
-    onTabungPinjam(action, j, keterangan, tipe);
+    // Validasi untuk pengembalian - harus pilih dari records
+    if (action === 'kembali') {
+      if (!selectedPinjamId) {
+        alert('Pilih pinjaman yang akan dikembalikan');
+        return;
+      }
+      const selected = pinjamRecords.find(r => r.id === selectedPinjamId);
+      if (!selected || j > (selected.jumlahPinjam - selected.jumlahKembali)) {
+        const sisaPinjam = selected ? (selected.jumlahPinjam - selected.jumlahKembali) : 0;
+        alert(`Tidak bisa mengembalikan ${j} tabung. Sisa pinjaman hanya ${sisaPinjam} tabung.`);
+        return;
+      }
+    }
+
+    // Validasi untuk pengembalian - stok pinjam
+    if (action === 'kembali' && j > stokTabungPinjam) {
+      alert(`Tidak bisa mengembalikan ${j} tabung. Total stok pinjam hanya ${stokTabungPinjam} tabung.`);
+      return;
+    }
+
+    onTabungPinjam(action, j, namaPeminjam, tipe, selectedPinjamId || undefined);
     setJumlah('');
+    setNamaPeminjam('');
     setKeterangan('');
+    setSelectedPinjamId(null);
+    handlePinjamSuccess();
   };
 
   return (
@@ -112,34 +170,94 @@ export default function TabungPinjamForm({ onTabungPinjam, stokTabungPinjam }: P
         )}
       </div>
 
-      <div>
-        <label htmlFor="pinjam-jumlah" className="block text-sm font-medium mb-2">
-          Jumlah Tabung
-        </label>
-        <input
-          id="pinjam-jumlah"
-          type="number"
-          value={jumlah}
-          onChange={(e) => setJumlah(e.target.value)}
-          className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          min={1}
-          max={action === 'kembali' ? stokTabungPinjam : undefined}
-          required
-          placeholder={action === 'kembali' ? `Maks: ${stokTabungPinjam}` : 'Masukkan jumlah'}
-        />
-      </div>
+      {action === 'pinjam' ? (
+        <>
+          <div>
+            <label htmlFor="nama-peminjam" className="block text-sm font-medium mb-2">
+              Nama Peminjam
+            </label>
+            <input
+              id="nama-peminjam"
+              type="text"
+              value={namaPeminjam}
+              onChange={(e) => setNamaPeminjam(e.target.value)}
+              className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+              placeholder="Nama customer yang meminjam"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="pinjam-jumlah" className="block text-sm font-medium mb-2">
+              Jumlah Tabung
+            </label>
+            <input
+              id="pinjam-jumlah"
+              type="number"
+              value={jumlah}
+              onChange={(e) => setJumlah(e.target.value)}
+              className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              min={1}
+              required
+              placeholder="Masukkan jumlah tabung yang dipinjamkan"
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <div>
+            <label htmlFor="kembali-peminjam" className="block text-sm font-medium mb-2">
+              Pilih Peminjam
+            </label>
+            <select
+              id="kembali-peminjam"
+              value={selectedPinjamId || ''}
+              onChange={(e) => setSelectedPinjamId(e.target.value ? parseInt(e.target.value) : null)}
+              className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            >
+              <option value="">-- Pilih peminjam --</option>
+              {pinjamRecords.map((record) => {
+                const sisaPinjam = record.jumlahPinjam - record.jumlahKembali;
+                return (
+                  <option key={record.id} value={record.id}>
+                    {record.namaPeminjam} (Sisa: {sisaPinjam} tabung)
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="jumlah-kembali" className="block text-sm font-medium mb-2">
+              Jumlah Dikembalikan
+            </label>
+            <input
+              id="jumlah-kembali"
+              type="number"
+              value={jumlah}
+              onChange={(e) => setJumlah(e.target.value)}
+              className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              min={1}
+              max={stokTabungPinjam}
+              required
+              placeholder={`Maks: ${stokTabungPinjam}`}
+            />
+          </div>
+        </>
+      )}
 
       <div>
-        <label htmlFor="pinjam-keterangan" className="block text-sm font-medium mb-2">
-          Keterangan
+        <label htmlFor="pinjam-catatan" className="block text-sm font-medium mb-2">
+          Catatan (Opsional)
         </label>
         <textarea
-          id="pinjam-keterangan"
+          id="pinjam-catatan"
           value={keterangan}
           onChange={(e) => setKeterangan(e.target.value)}
           className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          rows={3}
-          placeholder="Nama peminjam atau catatan lainnya"
+          rows={2}
+          placeholder="Catatan tambahan (nomor tabung, kondisi, dll)"
         />
       </div>
 

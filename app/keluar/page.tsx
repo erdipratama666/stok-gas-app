@@ -42,9 +42,10 @@ export default function KeluarPage() {
   const handleGasKeluar = async (
     jumlah: number, 
     keterangan: string, 
-    tipe: 'isi' | 'kosong'
+    tipe: 'isi' | 'kosong',
+    lokasi: string
   ) => {
-    console.log('📤 Mengirim data keluar:', { action: 'keluar', tipe, jumlah, keterangan });
+    console.log('📤 Mengirim data keluar:', { action: 'keluar', tipe, jumlah, keterangan, lokasi });
 
     try {
       const res = await fetch('/api/stok', {
@@ -54,7 +55,8 @@ export default function KeluarPage() {
           action: 'keluar',
           tipe,
           jumlah,
-          keterangan
+          keterangan,
+          lokasi
         })
       });
 
@@ -69,7 +71,7 @@ export default function KeluarPage() {
           tabungPinjam: data.stok.tabungPinjam
         });
         
-        alert(`✅ Berhasil mencatat keluar ${jumlah} tabung ${tipe}`);
+        alert(data.message || `✅ Berhasil mencatat keluar ${jumlah} tabung ${tipe} ke Pangkalan ${lokasi}`);
         
         // Refresh stok untuk memastikan data terbaru
         await fetchStok();
