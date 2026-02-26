@@ -39,20 +39,24 @@ export default function MasukPage() {
   };
 
   const handleGasMasuk = async (
-    jumlah: number, 
-    keterangan: string, 
-    tipe: 'isi' | 'kosong'
+    jumlah: number,
+    keterangan: string,
+    tipe: 'isi' | 'kosong',
+    lokasi?: string
   ) => {
     try {
+      const payload: any = {
+        action: 'masuk',
+        tipe,
+        jumlah,
+        keterangan,
+      };
+      if (lokasi) payload.lokasi = lokasi;
+
       const res = await fetch('/api/stok', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'masuk',
-          tipe,
-          jumlah,
-          keterangan
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();

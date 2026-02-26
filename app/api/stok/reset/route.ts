@@ -3,7 +3,11 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
+    // clear all history including loan records
     await prisma.transaksi.deleteMany({});
+    await prisma.tabungPinjam.deleteMany({});
+
+    // start new stok entry at zero
     await prisma.stok.create({
       data: {
         tabungIsi: 0,

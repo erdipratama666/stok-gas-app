@@ -2,6 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import StockOverview from '@/components/stok/StockOverview';
 
+type PinjamRecord = {
+  id: number;
+  namaPeminjam: string;
+  jumlahPinjam: number;
+  jumlahKembali: number;
+  status: string;
+  catatan: string;
+};
+
 type Stok = {
   tabungIsi: number;
   tabungKosong: number;
@@ -15,9 +24,12 @@ export default function StockPage() {
     tabungPinjam: 0 
   });
   const [loading, setLoading] = useState(true);
+  const [pinjamNotes, setPinjamNotes] = useState<PinjamRecord[]>([]);
+  const [pinjamSummary, setPinjamSummary] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchStok();
+    fetchPinjamNotes();
   }, []);
 
   const fetchStok = async () => {
@@ -32,6 +44,25 @@ export default function StockPage() {
       console.error('Error fetching stok:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPinjamNotes = async () => {
+    try {
+      const res = await fetch('/api/transaksi/pinjam');
+      if (res.ok) {
+        const data: PinjamRecord[] = await res.json();
+        setPinjamNotes(data);
+        // build summary by borrower name
+        const summary: Record<string, number> = {};
+        data.forEach((rec) => {
+          const key = rec.namaPeminjam || 'Unknown';
+          summary[key] = (summary[key] || 0) + rec.jumlahPinjam;
+        });
+        setPinjamSummary(summary);
+      }
+    } catch (err) {
+      console.error('Error fetching pinjam notes:', err);
     }
   };
 
@@ -97,7 +128,20 @@ export default function StockPage() {
         stokTabungPinjam={stok.tabungPinjam}
       />
 
-      {/* Catatan Pinjam dipindahkan dari menu Stok karena sudah ada fitur Kembali di modul Pinjam */}
+      {/* tampilkan catatan peminjaman terbaru */}
+      {/* tampilkan ringkasan total pinjam per peminjam */}
+      {Object.keys(pinjamSummary).length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-xl font-semibold mb-2">Total Pinjam per Nama</h3>
+          <ul className="space-y-2">
+            {Object.entries(pinjamSummary).map(([name, total]) => (
+              <li key={name} className="p-2 border rounded">
+                <strong>{name}</strong> – {total} tabung
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

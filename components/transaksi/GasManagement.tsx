@@ -31,20 +31,28 @@ const GasManagement: React.FC = () => {
     }
   };
 
-  const handleGasMasuk = async (jumlah: number, keterangan: string, tipe: TipeTabung) => {
+  const handleGasMasuk = async (
+    jumlah: number,
+    keterangan: string,
+    tipe: TipeTabung,
+    lokasi?: string
+  ) => {
     setLoading(true);
     try {
+      const payload: any = {
+        action: 'masuk',
+        tipe,
+        jumlah,
+        keterangan,
+      };
+      if (lokasi) payload.lokasi = lokasi;
+
       const response = await fetch('/api/stok', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'masuk',
-          tipe,
-          jumlah,
-          keterangan,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();

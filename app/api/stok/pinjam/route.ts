@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
     const jumlah = Number(body.jumlah);
     const tipe = String(body.tipe || "").trim().toLowerCase();
     const namaPeminjam = String(body.namaPeminjam || "").trim();
+    const catatan = String(body.catatan || "").trim();
     const pinjamId = body.pinjamId ?? null;
 
     // Validasi input
@@ -82,13 +83,13 @@ export async function POST(request: NextRequest) {
       } as any,
     });
 
-    // Create transaksi record
+    // Create transaksi record (store borrower note if available)
     const transaksi = await prisma.transaksi.create({
       data: {
         action,
         tipe,
         jumlah,
-        keterangan: namaPeminjam,
+        keterangan: catatan ? `${namaPeminjam} – ${catatan}` : namaPeminjam,
         createdBy: "user",
       } as any,
     });
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
             jumlahPinjam: jumlah,
             jumlahKembali: 0,
             status: "dipinjam",
-            catatan: "",
+            catatan: catatan || "",
           },
         });
       } else if (action === "kembali" && pinjamId) {

@@ -152,7 +152,8 @@ export async function POST(request: NextRequest) {
       }),
     ];
 
-    // Handle TabungPinjam untuk pinjam dan kembali (dengan error handling fallback)
+    // Handle TabungPinjam untuk pinjam, kembali, dan juga pencatatan masuk tabung kosong
+    // (dengan error handling fallback)
     if (action === "pinjam") {
       try {
         // @ts-ignore - TabungPinjam model exists
@@ -186,6 +187,23 @@ export async function POST(request: NextRequest) {
         );
       } catch (e) {
         console.error("TabungPinjam update error:", e);
+        // Fallback: lanjut tanpa update tabungPinjam
+      }
+    } else if (action === "masuk" && pinjamId && tipe === "kosong") {
+      try {
+        // @ts-ignore - TabungPinjam model exists
+        (transactionOps as any[]).push(
+          (prisma as any).tabungPinjam.update({
+            where: { id: pinjamId },
+            data: {
+              jumlahKembali: {
+                increment: jumlah,
+              },
+            },
+          })
+        );
+      } catch (e) {
+        console.error("TabungPinjam update error for masuk:", e);
         // Fallback: lanjut tanpa update tabungPinjam
       }
     }

@@ -2,16 +2,31 @@
 import React, { useState } from 'react';
 
 type TipeTabung = 'isi' | 'kosong';
+
+
 type Props = { 
-  onGasMasuk: (jumlah: number, keterangan: string, tipe: TipeTabung) => void; 
+  onGasMasuk: (
+    jumlah: number,
+    keterangan: string,
+    tipe: TipeTabung,
+    lokasi?: string
+  ) => void; 
 };
 
 export default function GasMasukForm({ onGasMasuk }: Props) {
   const [jumlah, setJumlah] = useState('');
   const [keterangan, setKeterangan] = useState('');
   const [tipe, setTipe] = useState<TipeTabung>('isi');
+  const [lokasi, setLokasi] = useState('A');
 
-  const submit = (e: React.FormEvent) => {
+
+  const LOKASI_PANGKALAN = [
+  'A','B','C','D','E','F','G','H','I','J',
+  'K','L','M','N','O','P','Q','R','S','T',
+  'U','V','W','X','Y','Z',
+];
+
+const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const j = Math.max(0, parseInt(jumlah || '0', 10));
     if (j <= 0) {
@@ -19,7 +34,7 @@ export default function GasMasukForm({ onGasMasuk }: Props) {
       return;
     }
 
-    onGasMasuk(j, keterangan, tipe);
+    onGasMasuk(j, keterangan, tipe, lokasi);
     setJumlah('');
     setKeterangan('');
   };
@@ -74,6 +89,26 @@ export default function GasMasukForm({ onGasMasuk }: Props) {
           placeholder="Masukkan jumlah"
         />
       </div>
+
+      {tipe === 'kosong' && (
+        <div>
+          <label htmlFor="masuk-lokasi" className="block text-sm font-medium mb-2">
+            Lokasi Pangkalan
+          </label>
+          <select
+            id="masuk-lokasi"
+            value={lokasi}
+            onChange={(e) => setLokasi(e.target.value)}
+            className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          >
+            {LOKASI_PANGKALAN.map((lok) => (
+              <option key={lok} value={lok}>
+                Pangkalan {lok}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div>
         <label htmlFor="masuk-keterangan" className="block text-sm font-medium mb-2">

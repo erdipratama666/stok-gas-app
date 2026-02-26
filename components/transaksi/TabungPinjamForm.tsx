@@ -17,8 +17,9 @@ type Props = {
   onTabungPinjam: (
     action: ActionPinjam, 
     jumlah: number, 
-    keterangan: string, 
+    namaPeminjam: string, 
     tipe: TipeTabung,
+    catatan?: string,
     pinjamId?: number
   ) => void; 
   stokTabungPinjam: number;
@@ -90,7 +91,15 @@ export default function TabungPinjamForm({ onTabungPinjam, stokTabungPinjam }: P
       return;
     }
 
-    onTabungPinjam(action, j, namaPeminjam, tipe, selectedPinjamId || undefined);
+    // pass catatan only when pinjam
+    onTabungPinjam(
+      action,
+      j,
+      namaPeminjam,
+      tipe,
+      keterangan || undefined,
+      selectedPinjamId || undefined
+    );
     setJumlah('');
     setNamaPeminjam('');
     setKeterangan('');
@@ -260,7 +269,6 @@ export default function TabungPinjamForm({ onTabungPinjam, stokTabungPinjam }: P
           placeholder="Catatan tambahan (nomor tabung, kondisi, dll)"
         />
       </div>
-
       <button 
         type="submit" 
         className={`w-full py-2 rounded transition text-white font-medium ${

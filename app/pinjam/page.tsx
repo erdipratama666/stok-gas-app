@@ -43,6 +43,7 @@ export default function PinjamPage() {
     jumlah: number,
     namaPeminjam: string,
     tipe: 'isi' | 'kosong',
+    catatan?: string,
     pinjamId?: number
   ) => {
     try {
@@ -54,6 +55,7 @@ export default function PinjamPage() {
           tipe,
           jumlah,
           namaPeminjam,
+          catatan,
           pinjamId,
         }),
       });
