@@ -7,15 +7,15 @@ type Props = {
 };
 
 const LOKASI_PANGKALAN = [
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
-  'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-  'U', 'V', 'W', 'X', 'Y', 'Z'
+  'TATANG', 'AI SITI', 'TAUFIK', 'BUDY', 'TARI', 'AHMAD', 'WAWAN', 'ASEP', 'REKHA', 'MELLA',
+  'MUH JAJULI', 'H AGAN', 'J PAKPAHAN', 'IIM', 'DILA', 'H JOJON', 'HALIM', 'NENENG', 'JAJAT', 'AS MARINGAN',
+  'IBRANIUS', 'IBRA', 'DARDA', 'SUHERMAN', 'H YEYET', 'TETI'
 ];
 
 export default function GasKeluarForm({ onGasKeluar }: Props) {
   const [jumlah, setJumlah] = useState('');
   const [keterangan, setKeterangan] = useState('');
-  const [tipe, setTipe] = useState<TipeTabung>('isi');
+  const [tipe] = useState<TipeTabung>('isi'); // Selalu gunakan 'isi', tidak bisa diubah
   const [lokasi, setLokasi] = useState('A');
 
   const submit = (e: React.FormEvent) => {
@@ -33,36 +33,6 @@ export default function GasKeluarForm({ onGasKeluar }: Props) {
   return (
     <form onSubmit={submit} className="bg-white rounded-lg shadow p-6 space-y-4">
       <h3 className="text-lg font-semibold">Form Gas Keluar</h3>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">Tipe Tabung</label>
-        <div className="flex gap-4">
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input
-              id="keluar-tipe-isi"
-              type="radio"
-              name="tipe-keluar"
-              value="isi"
-              checked={tipe === 'isi'}
-              onChange={() => setTipe('isi')}
-              className="w-4 h-4 cursor-pointer"
-            />
-            <span>Tabung Isi</span>
-          </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input
-              id="keluar-tipe-kosong"
-              type="radio"
-              name="tipe-keluar"
-              value="kosong"
-              checked={tipe === 'kosong'}
-              onChange={() => setTipe('kosong')}
-              className="w-4 h-4 cursor-pointer"
-            />
-            <span>Tabung Kosong</span>
-          </label>
-        </div>
-      </div>
 
       <div>
         <label htmlFor="keluar-lokasi" className="block text-sm font-medium mb-2">

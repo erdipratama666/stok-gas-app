@@ -37,6 +37,7 @@ model Transaksi {
 model TabungPinjam {
   id            Int      @id @default(autoincrement())
   namaPeminjam  String   // Nama customer yang meminjam
+  tipe          String   // "isi" atau "kosong" - tipe tabung yang dipinjam
   jumlahPinjam  Int      // Jumlah tabung yang dipinjam
   jumlahKembali Int      @default(0) // Jumlah yang sudah dikembalikan
   status        String   @default("dipinjam") // "dipinjam" atau "selesai"

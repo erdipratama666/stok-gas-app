@@ -4,9 +4,16 @@ import React, { useState, useEffect } from 'react';
 type ActionPinjam = 'pinjam' | 'kembali';
 type TipeTabung = 'isi' | 'kosong';
 
+const LOKASI_PANGKALAN = [
+  'TATANG', 'AI SITI', 'TAUFIK', 'BUDY', 'TARI', 'AHMAD', 'WAWAN', 'ASEP', 'REKHA', 'MELLA',
+  'MUH JAJULI', 'H AGAN', 'J PAKPAHAN', 'IIM', 'DILA', 'H JOJON', 'HALIM', 'NENENG', 'JAJAT', 'AS MARINGAN',
+  'IBRANIUS', 'IBRA', 'DARDA', 'SUHERMAN', 'H YEYET', 'TETI'
+];
+
 type PinjamRecord = {
   id: number;
   namaPeminjam: string;
+  tipe?: string; // 'isi' atau 'kosong' - tipe tabung yang dipinjam
   jumlahPinjam: number;
   jumlahKembali: number;
   status: string;
@@ -183,17 +190,22 @@ export default function TabungPinjamForm({ onTabungPinjam, stokTabungPinjam }: P
         <>
           <div>
             <label htmlFor="nama-peminjam" className="block text-sm font-medium mb-2">
-              Nama Peminjam
+              Pilih Pangkalan
             </label>
-            <input
+            <select
               id="nama-peminjam"
-              type="text"
               value={namaPeminjam}
               onChange={(e) => setNamaPeminjam(e.target.value)}
               className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
-              placeholder="Nama customer yang meminjam"
-            />
+            >
+              <option value="">-- Pilih Pangkalan --</option>
+              {LOKASI_PANGKALAN.map((pangkalan) => (
+                <option key={pangkalan} value={pangkalan}>
+                  {pangkalan}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -228,9 +240,10 @@ export default function TabungPinjamForm({ onTabungPinjam, stokTabungPinjam }: P
               <option value="">-- Pilih peminjam --</option>
               {pinjamRecords.map((record) => {
                 const sisaPinjam = record.jumlahPinjam - record.jumlahKembali;
+                const tipeLabel = record.tipe === 'kosong' ? '(Kosong)' : '(Isi)';
                 return (
                   <option key={record.id} value={record.id}>
-                    {record.namaPeminjam} (Sisa: {sisaPinjam} tabung)
+                    {record.namaPeminjam} {tipeLabel} - Sisa: {sisaPinjam} tabung
                   </option>
                 );
               })}

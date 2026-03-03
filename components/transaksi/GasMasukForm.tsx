@@ -21,9 +21,9 @@ export default function GasMasukForm({ onGasMasuk }: Props) {
 
 
   const LOKASI_PANGKALAN = [
-  'A','B','C','D','E','F','G','H','I','J',
-  'K','L','M','N','O','P','Q','R','S','T',
-  'U','V','W','X','Y','Z',
+  'TATANG','AI SITI','TAUFIK','BUDY','TARI','AHMAD','WAWAN','ASEP','REKHA','MELLA',
+  'MUH JAJULI','H AGAN','J PAKPAHAN','IIM','DILA','H JOJON','HALIM','NENENG','JAJAT','AS MARINGAN',
+  'IBRANIUS','IBRA','DARDA','SUHERMAN','H YEYET','TETI',
 ];
 
 const submit = (e: React.FormEvent) => {

@@ -21,6 +21,30 @@ type LaporanPangkalan = {
   tipeKosong: number;
 };
 
+const LOKASI_PANGKALAN = [
+  'TATANG', 'AI SITI', 'TAUFIK', 'BUDY', 'TARI', 'AHMAD', 'WAWAN', 'ASEP', 'REKHA', 'MELLA',
+  'MUH JAJULI', 'H AGAN', 'J PAKPAHAN', 'IIM', 'DILA', 'H JOJON', 'HALIM', 'NENENG', 'JAJAT', 'AS MARINGAN',
+  'IBRANIUS', 'IBRA', 'DARDA', 'SUHERMAN', 'H YEYET', 'TETI'
+];
+
+// Fungsi untuk mapping kode lama (A, B, C, dst) ke nama pangkalan
+const mapLokasiToName = (lokasi: string | null): string => {
+  if (!lokasi) return '-';
+  
+  // Jika sudah berupa nama pangkalan (bukan huruf tunggal atau jika huruf uppercase panjang)
+  if (lokasi.length > 1 || LOKASI_PANGKALAN.includes(lokasi)) {
+    return lokasi;
+  }
+  
+  // Mapping dari kode huruf lama (A=0, B=1, ..., Z=25)
+  const charCode = lokasi.toUpperCase().charCodeAt(0) - 65;
+  if (charCode >= 0 && charCode < LOKASI_PANGKALAN.length) {
+    return LOKASI_PANGKALAN[charCode];
+  }
+  
+  return lokasi;
+};
+
 export default function LaporanPenjualanPangkalan() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +103,7 @@ export default function LaporanPenjualanPangkalan() {
     const groupedByLokasi: { [key: string]: LaporanPangkalan } = {};
 
     keluarTransaksi.forEach((t) => {
-      const lok = t.lokasi || 'Unknown';
+      const lok = mapLokasiToName(t.lokasi);
       
       if (!groupedByLokasi[lok]) {
         groupedByLokasi[lok] = {
@@ -207,7 +231,7 @@ export default function LaporanPenjualanPangkalan() {
                         <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-2">
                           #{index + 1}
                         </span>
-                        Pangkalan {item.lokasi}
+                        {item.lokasi}
                       </td>
                       <td className="px-4 py-3 text-lg font-bold text-red-600">
                         {item.totalPenjualan}

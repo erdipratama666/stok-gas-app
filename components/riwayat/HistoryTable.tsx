@@ -12,6 +12,30 @@ type Row = {
   createdAt: string;
 };
 
+const LOKASI_PANGKALAN = [
+  'TATANG', 'AI SITI', 'TAUFIK', 'BUDY', 'TARI', 'AHMAD', 'WAWAN', 'ASEP', 'REKHA', 'MELLA',
+  'MUH JAJULI', 'H AGAN', 'J PAKPAHAN', 'IIM', 'DILA', 'H JOJON', 'HALIM', 'NENENG', 'JAJAT', 'AS MARINGAN',
+  'IBRANIUS', 'IBRA', 'DARDA', 'SUHERMAN', 'H YEYET', 'TETI'
+];
+
+// Fungsi untuk mapping kode lama (A, B, C, dst) ke nama pangkalan
+const mapLokasiToName = (lokasi: string | null): string => {
+  if (!lokasi) return '-';
+  
+  // Jika sudah berupa nama pangkalan (bukan huruf tunggal atau jika huruf uppercase panjang)
+  if (lokasi.length > 1 || LOKASI_PANGKALAN.includes(lokasi)) {
+    return lokasi;
+  }
+  
+  // Mapping dari kode huruf lama (A=0, B=1, ..., Z=25)
+  const charCode = lokasi.toUpperCase().charCodeAt(0) - 65;
+  if (charCode >= 0 && charCode < LOKASI_PANGKALAN.length) {
+    return LOKASI_PANGKALAN[charCode];
+  }
+  
+  return lokasi;
+};
+
 export default function HistoryTable() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,15 +73,16 @@ export default function HistoryTable() {
     return rows.filter((r) => {
       // Filter by search query
       const searchLower = searchQuery.toLowerCase();
+      const mappedLokasi = mapLokasiToName(r.lokasi);
       const matchesSearch = !searchQuery || 
         (r.keterangan?.toLowerCase().includes(searchLower)) ||
-        (r.lokasi?.toLowerCase().includes(searchLower));
+        (mappedLokasi?.toLowerCase().includes(searchLower));
 
       // Filter by action
       const matchesAction = !filterAction || r.action === filterAction;
 
-      // Filter by lokasi
-      const matchesLokasi = !filterLokasi || r.lokasi === filterLokasi;
+      // Filter by lokasi dengan mapping
+      const matchesLokasi = !filterLokasi || mapLokasiToName(r.lokasi) === filterLokasi;
 
       // Filter by date range
       const rowDate = new Date(r.createdAt).toISOString().split('T')[0];
@@ -68,10 +93,10 @@ export default function HistoryTable() {
     });
   }, [rows, searchQuery, filterAction, filterLokasi, dateFrom, dateTo]);
 
-  // Get unique lokasi untuk dropdown
+  // Get unique lokasi untuk dropdown dengan mapping ke nama
   const uniqueLokasi = Array.from(new Set(rows
     .filter(r => r.lokasi)
-    .map(r => r.lokasi as string)
+    .map(r => mapLokasiToName(r.lokasi as string))
   )).sort();
 
   if (loading) {
@@ -210,7 +235,9 @@ export default function HistoryTable() {
                   <td className="px-3 py-2 font-semibold">{r.jumlah}</td>
                   <td className="px-3 py-2 text-gray-600">
                     {r.action === 'keluar' && r.lokasi ? (
-                      <>Pangkalan {r.lokasi}</> 
+                      <>{mapLokasiToName(r.lokasi)}</> 
+                    ) : r.action === 'pinjam' || r.action === 'kembali' ? (
+                      r.keterangan || '-'
                     ) : (
                       r.keterangan || '-'
                     )}

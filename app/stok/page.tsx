@@ -5,6 +5,7 @@ import StockOverview from '@/components/stok/StockOverview';
 type PinjamRecord = {
   id: number;
   namaPeminjam: string;
+  tipe?: string; // 'isi' atau 'kosong' - tipe tabung yang dipinjam
   jumlahPinjam: number;
   jumlahKembali: number;
   status: string;
@@ -25,7 +26,7 @@ export default function StockPage() {
   });
   const [loading, setLoading] = useState(true);
   const [pinjamNotes, setPinjamNotes] = useState<PinjamRecord[]>([]);
-  const [pinjamSummary, setPinjamSummary] = useState<Record<string, number>>({});
+  const [pinjamSummary, setPinjamSummary] = useState<Record<string, { isi: number; kosong: number; total: number }>>({});
 
   useEffect(() => {
     fetchStok();
@@ -53,11 +54,24 @@ export default function StockPage() {
       if (res.ok) {
         const data: PinjamRecord[] = await res.json();
         setPinjamNotes(data);
-        // build summary by borrower name
-        const summary: Record<string, number> = {};
+        
+        // Build summary by borrower name with type breakdown
+        const summary: Record<string, { isi: number; kosong: number; total: number }> = {};
         data.forEach((rec) => {
           const key = rec.namaPeminjam || 'Unknown';
-          summary[key] = (summary[key] || 0) + rec.jumlahPinjam;
+          // @ts-ignore - tipe field added from schema update
+          const tipe = rec.tipe || 'isi';
+          
+          if (!summary[key]) {
+            summary[key] = { isi: 0, kosong: 0, total: 0 };
+          }
+          
+          if (tipe === 'isi') {
+            summary[key].isi += rec.jumlahPinjam;
+          } else if (tipe === 'kosong') {
+            summary[key].kosong += rec.jumlahPinjam;
+          }
+          summary[key].total += rec.jumlahPinjam;
         });
         setPinjamSummary(summary);
       }
@@ -129,17 +143,31 @@ export default function StockPage() {
       />
 
       {/* tampilkan catatan peminjaman terbaru */}
-      {/* tampilkan ringkasan total pinjam per peminjam */}
+      {/* tampilkan ringkasan total pinjam per peminjam dengan breakdown isi/kosong */}
       {Object.keys(pinjamSummary).length > 0 && (
         <div className="mt-8">
-          <h3 className="text-xl font-semibold mb-2">Total Pinjam per Nama</h3>
-          <ul className="space-y-2">
-            {Object.entries(pinjamSummary).map(([name, total]) => (
-              <li key={name} className="p-2 border rounded">
-                <strong>{name}</strong> – {total} tabung
-              </li>
+          <h3 className="text-xl font-semibold mb-4">Total Pinjam per Nama</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(pinjamSummary).map(([name, breakdown]) => (
+              <div key={name} className="p-4 border rounded-lg bg-white shadow-sm">
+                <div className="font-semibold text-lg mb-2 text-gray-800">{name}</div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Tabung Isi:</span>
+                    <span className="font-semibold text-green-600">{breakdown.isi} tabung</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Tabung Kosong:</span>
+                    <span className="font-semibold text-orange-600">{breakdown.kosong} tabung</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between items-center">
+                    <span className="font-semibold text-gray-700">Total Pinjam:</span>
+                    <span className="font-bold text-blue-600 text-lg">{breakdown.total} tabung</span>
+                  </div>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </div>

@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
         await (prisma as any).tabungPinjam?.create?.({
           data: {
             namaPeminjam: namaPeminjam,
+            tipe: tipe, // Store tipe: "isi" atau "kosong"
             jumlahPinjam: jumlah,
             jumlahKembali: 0,
             status: "dipinjam",
